@@ -1,0 +1,69 @@
+:root {
+  color: #43554a;
+  background: #f8f2df;
+  font-family: "Trebuchet MS", ui-rounded, "Arial Rounded MT Bold", "PingFang TC", "Microsoft JhengHei", "Noto Sans TC", system-ui, sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+:root:lang(zh-CN) { font-family: "Trebuchet MS", ui-rounded, "Arial Rounded MT Bold", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif; }
+
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; }
+button, input { font: inherit; }
+
+main.heartopia-shell { margin: 0; min-height: 100vh; padding: 0; }
+.heartopia-shell { background: radial-gradient(circle at 12% 8%, rgba(255, 255, 255, .9), transparent 26rem), radial-gradient(circle at 88% 22%, rgba(207, 232, 213, .65), transparent 25rem), linear-gradient(155deg, #fffaf0 0%, #f8efd8 46%, #e7f1dd 100%); }
+.heartopia-page { margin: 0 auto; max-width: 1040px; padding: 2.5rem 1.4rem 2rem; }
+.heartopia-header { padding: 0 0 1.25rem; text-align: center; }
+.heartopia-kicker { color: #7a5f3f; font-size: .78rem; font-weight: 700; letter-spacing: .16em; margin: 0 0 .35rem; text-transform: uppercase; }
+.heartopia-header h1 { color: #4f6657; font-size: clamp(1.8rem, 5vw, 2.8rem); margin: 0; }
+.heartopia-date { color: #5b6c60; margin: .6rem 0 0; }
+
+.heartopia-map { margin: 0; position: relative; }
+.heartopia-map-image { display: block; filter: drop-shadow(0 16px 25px rgba(89, 111, 86, .14)); height: auto; width: 100%; }
+.heartopia-map-marker { align-items: center; appearance: none; background: transparent; border: 0; cursor: pointer; display: flex; filter: drop-shadow(0 4px 5px rgba(49, 63, 52, .28)); justify-content: center; margin: 0; min-height: 44px; min-width: 44px; padding: 0; position: absolute; transform: translate(-50%, -50%); z-index: 2; }
+.heartopia-map-marker > img { background: rgba(255, 253, 244, .94); border: 3px solid rgba(255, 255, 255, .96); border-radius: 50%; height: clamp(31px, 4.6vw, 49px); object-fit: contain; padding: 4px; width: clamp(31px, 4.6vw, 49px); }
+.heartopia-map-marker > span { background: rgba(255, 253, 244, .97); border: 1px solid rgba(117, 137, 118, .24); border-radius: .65rem; color: #526357; display: none; font-size: .8rem; left: 50%; min-width: 9.5rem; padding: .45rem .55rem; position: absolute; text-align: center; top: calc(100% + .3rem); transform: translateX(-50%); white-space: nowrap; z-index: 4; }
+.heartopia-map-marker > span small { color: #66756a; display: block; margin-top: .15rem; }
+.heartopia-map-marker:hover > span, .heartopia-map-marker:focus > span { display: block; }
+.heartopia-cluster-1 { transform: translate(calc(-50% - 18px), -50%); }
+.heartopia-cluster-2 { transform: translate(calc(-50% + 18px), -50%); }
+
+.heartopia-resource-grid { display: grid; gap: 1rem; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 1.2rem 0 0; }
+.heartopia-resource-card { align-items: center; background: rgba(255, 253, 246, .78); border: 1px solid rgba(128, 143, 121, .18); border-radius: 1.15rem; display: flex; gap: 1rem; margin: 0; padding: 1rem 1.2rem; }
+.heartopia-resource-card > img { height: 76px; object-fit: contain; width: 76px; }
+.heartopia-resource-card h2 { color: #4d6052; font-size: 1rem; margin: 0; }
+.heartopia-resource-card p { color: #43554a; font-size: 1.2rem; font-weight: 700; margin: .3rem 0 0; }
+.heartopia-roamingOak { background: rgba(252, 241, 219, .88); }
+.heartopia-flawlessFluorite { background: rgba(220, 244, 235, .82); }
+
+.heartopia-upcoming { margin-top: 2.4rem; }
+.heartopia-upcoming h2 { color: #536658; font-size: 1.15rem; margin: 0 0 .65rem; }
+.heartopia-upcoming-list { display: grid; }
+.heartopia-upcoming-row { align-items: center; border-bottom: 1px solid rgba(104, 127, 107, .14); display: grid; gap: .75rem; grid-template-columns: 5rem repeat(2, minmax(0, 1fr)); padding: .7rem .2rem; }
+.heartopia-upcoming-row time { color: #6b5c47; font-weight: 700; }
+.heartopia-upcoming-row span { align-items: center; color: #566a5c; display: flex; gap: .45rem; }
+.heartopia-upcoming-row img { height: 30px; object-fit: contain; width: 30px; }
+
+.heartopia-footer { color: #5b6c60; display: grid; font-size: .875rem; gap: .4rem; line-height: 1.6; margin-top: 2.5rem; text-align: center; }
+.heartopia-footer p { margin: 0; }
+.heartopia-footer a { color: inherit; text-decoration: underline; }
+
+
+@media (max-width: 680px) {
+  .heartopia-page { padding: 1.6rem .8rem; }
+  .heartopia-resource-grid { grid-template-columns: 1fr; }
+  .heartopia-resource-card > img { height: 64px; width: 64px; }
+  .heartopia-upcoming-row { align-items: flex-start; grid-template-columns: 3.8rem 1fr; }
+  .heartopia-upcoming-row span:last-child { grid-column: 2; }
+  .heartopia-map-marker > span { display: none; }
+}
+
+.heartopia-lang { background: rgba(255, 253, 246, .78); border: 1px solid rgba(104, 127, 107, .28); border-radius: 99px; display: flex; font-size: .875rem; gap: .15rem; margin: 0 0 .9rem auto; padding: .2rem; width: fit-content; }
+.heartopia-lang a, .heartopia-lang span { border-radius: 99px; padding: .3rem .85rem; }
+.heartopia-lang a { color: #5b6c60; text-decoration: none; }
+.heartopia-lang a:hover, .heartopia-lang a:focus-visible { background: rgba(120, 148, 125, .18); }
+.heartopia-lang span { background: #4f6657; color: #fffdf5; font-weight: 700; }
+
+img { -webkit-touch-callout: none; -webkit-user-drag: none; user-select: none; }

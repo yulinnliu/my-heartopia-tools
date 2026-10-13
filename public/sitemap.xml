@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://heartopia.hami-qua.com/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://heartopia.hami-qua.com/" />
+    <xhtml:link rel="alternate" hreflang="zh-TW" href="https://heartopia.hami-qua.com/zh-TW/" />
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://heartopia.hami-qua.com/zh-CN/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://heartopia.hami-qua.com/" />
+    <changefreq>daily</changefreq>
+  </url>
+  <url>
+    <loc>https://heartopia.hami-qua.com/zh-TW/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://heartopia.hami-qua.com/" />
+    <xhtml:link rel="alternate" hreflang="zh-TW" href="https://heartopia.hami-qua.com/zh-TW/" />
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://heartopia.hami-qua.com/zh-CN/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://heartopia.hami-qua.com/" />
+    <changefreq>daily</changefreq>
+  </url>
+  <url>
+    <loc>https://heartopia.hami-qua.com/zh-CN/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://heartopia.hami-qua.com/" />
+    <xhtml:link rel="alternate" hreflang="zh-TW" href="https://heartopia.hami-qua.com/zh-TW/" />
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://heartopia.hami-qua.com/zh-CN/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://heartopia.hami-qua.com/" />
+    <changefreq>daily</changefreq>
+  </url>
+</urlset>
