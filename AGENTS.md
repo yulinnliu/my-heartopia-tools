@@ -42,5 +42,7 @@ candidate's `HEAD`, that `node` matches `.node-version`, and
 `npm test` and `npm run build` inside the candidate, whose outputs
 (`node_modules/`, `dist/`, `dist-ssr/`) are ignored; last it checks that
 `HEAD` did not move and the tree is clean. A refusal prints its token as the
-first stderr line and exits 1. Every range runs every check: the verifier
+first stderr line and exits 1, or 9 for `TIME_SLACK_INVALID`. The report
+records the `ATC_TEST_TIME_SLACK` the run used (default 2), as `atc integrate`
+compares it before reusing a pass. Every range runs every check: the verifier
 takes no documentation-only exception, since the whole run is short.

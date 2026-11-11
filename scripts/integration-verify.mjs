@@ -1,6 +1,6 @@
 // Integration verifier that `atc integrate` runs in its candidate checkout
 // (AGENTS.md § Integration verification). A refusal prints its token as the
-// first stderr line, a summary after it, and exits 1.
+// first stderr line, a summary after it, and exits 1 (9 for TIME_SLACK_INVALID).
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readFileSync, realpathSync, writeFileSync } from "node:fs";
@@ -10,11 +10,27 @@ const SHA = /^[0-9a-f]{40}$/;
 const INPUTS = ["ATC_INTEGRATION_SHA", "ATC_CANDIDATE_DIR", "ATC_EXPECTED_MAIN_SHA", "ATC_REVIEWED_SOURCE_SHA"];
 const NPM_CLI = path.join(path.dirname(process.execPath), "node_modules", "npm", "bin", "npm-cli.js");
 
+const SLACK_VARIABLE = "ATC_TEST_TIME_SLACK";
+const DECIMAL = /^\s*[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?\s*$/;
+
 class Refusal extends Error {
-  constructor(token, detail) {
+  constructor(token, detail, exitCode = 1) {
     super(detail);
     this.token = token;
+    this.exitCode = exitCode;
   }
+}
+
+// The time slack as atc-testkit's timing.resolve reads it (docs/TESTKIT.md § Time slack of the
+// workspace root): a number of seconds from 0 to 30, 2 when the variable is unset or empty.
+function timeSlack() {
+  const raw = process.env[SLACK_VARIABLE] ?? "";
+  if (raw === "") return 2;
+  const value = DECIMAL.test(raw) ? Number(raw) : NaN;
+  if (!(Number.isFinite(value) && value >= 0 && value <= 30)) {
+    throw new Refusal("TIME_SLACK_INVALID", `${SLACK_VARIABLE}=${JSON.stringify(raw)}: give a number of seconds from 0 to 30`, 9);
+  }
+  return value;
 }
 
 // Git runs without the caller's GIT_* variables, so it always acts on the candidate.
@@ -54,6 +70,7 @@ function sameDir(a, b) {
 }
 
 function verify() {
+  const slack = timeSlack();
   const missing = INPUTS.filter((name) => !process.env[name]);
   if (missing.length) throw new Refusal("VERIFY_ENV_MISSING", `missing ${missing.join(", ")}`);
   const env = Object.fromEntries(INPUTS.map((name) => [name, process.env[name]]));
@@ -87,14 +104,14 @@ function verify() {
 
   if (process.env.ATC_VERIFICATION_REPORT) {
     // The atc-verification-report/2 shape (shared/conformance/verification-evidence/README.md of the
-    // workspace root): every range runs the whole suite in one stage, with no time slack.
+    // workspace root): every range runs the whole suite in one stage.
     const report = {
       schema: "atc-verification-report/2",
       selector: { name: "integration-verify.mjs", version: "1" },
       selection: { full: true, paths: [] },
       stages: [{ name: "vitest", marker: "all", ignore: [] }],
       dependency_inputs: { "package-lock.json": digest("package-lock.json"), ".node-version": digest(".node-version") },
-      time_slack: 0,
+      time_slack: slack,
       checks: steps,
       node: process.version,
     };
@@ -113,5 +130,5 @@ try {
   const token = error instanceof Refusal ? error.token : "VERIFIER_ERROR";
   console.error(token);
   console.error(error.message);
-  process.exit(1);
+  process.exit(error instanceof Refusal ? error.exitCode : 1);
 }
