@@ -1,0 +1,112 @@
+// Integration verifier that `atc integrate` runs in its candidate checkout
+// (AGENTS.md § Integration verification). A refusal prints its token as the
+// first stderr line, a summary after it, and exits 1.
+import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import { readFileSync, realpathSync, writeFileSync } from "node:fs";
+import path from "node:path";
+
+const SHA = /^[0-9a-f]{40}$/;
+const INPUTS = ["ATC_INTEGRATION_SHA", "ATC_CANDIDATE_DIR", "ATC_EXPECTED_MAIN_SHA", "ATC_REVIEWED_SOURCE_SHA"];
+const NPM_CLI = path.join(path.dirname(process.execPath), "node_modules", "npm", "bin", "npm-cli.js");
+
+class Refusal extends Error {
+  constructor(token, detail) {
+    super(detail);
+    this.token = token;
+  }
+}
+
+// Git runs without the caller's GIT_* variables, so it always acts on the candidate.
+const gitEnv = Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.toUpperCase().startsWith("GIT_")));
+
+function git(...args) {
+  const result = spawnSync("git", args, { encoding: "utf8", env: gitEnv });
+  if (result.error) throw new Refusal("VERIFIER_ERROR", `git ${args.join(" ")}: ${result.error.message}`);
+  return result;
+}
+
+function gitOut(...args) {
+  const result = git(...args);
+  if (result.status !== 0) throw new Refusal("VERIFIER_ERROR", `git ${args.join(" ")}: ${result.stderr.trim()}`);
+  return result.stdout.trim();
+}
+
+function isAncestor(ancestor, descendant) {
+  return git("merge-base", "--is-ancestor", ancestor, descendant).status === 0;
+}
+
+function npm(token, ...args) {
+  // npm writes to stdout only, so a refusal token stays the first stderr line.
+  const result = spawnSync(process.execPath, [NPM_CLI, ...args], { stdio: ["ignore", 1, 1] });
+  if (result.error) throw new Refusal(token, `npm ${args.join(" ")}: ${result.error.message}`);
+  if (result.status !== 0) throw new Refusal(token, `npm ${args.join(" ")} exited ${result.status}`);
+  return `npm ${args.join(" ")}`;
+}
+
+function digest(file) {
+  return createHash("sha256").update(readFileSync(file)).digest("hex");
+}
+
+function sameDir(a, b) {
+  const norm = (p) => realpathSync(p).replace(/[\\/]+$/, "");
+  return process.platform === "win32" ? norm(a).toLowerCase() === norm(b).toLowerCase() : norm(a) === norm(b);
+}
+
+function verify() {
+  const missing = INPUTS.filter((name) => !process.env[name]);
+  if (missing.length) throw new Refusal("VERIFY_ENV_MISSING", `missing ${missing.join(", ")}`);
+  const env = Object.fromEntries(INPUTS.map((name) => [name, process.env[name]]));
+  const invalid = INPUTS.filter((name) => name.endsWith("_SHA") && !SHA.test(env[name]));
+  if (invalid.length) throw new Refusal("VERIFY_ENV_INVALID", `not a full object ID: ${invalid.join(", ")}`);
+
+  const top = gitOut("rev-parse", "--show-toplevel");
+  if (!sameDir(process.cwd(), env.ATC_CANDIDATE_DIR) || !sameDir(top, env.ATC_CANDIDATE_DIR)) {
+    throw new Refusal("CANDIDATE_DIR_MISMATCH", `cwd ${process.cwd()}, tree ${top}, ATC_CANDIDATE_DIR ${env.ATC_CANDIDATE_DIR}`);
+  }
+  const head = gitOut("rev-parse", "HEAD");
+  if (head !== env.ATC_INTEGRATION_SHA) throw new Refusal("CANDIDATE_HEAD_MISMATCH", `HEAD ${head}`);
+  if (!isAncestor(env.ATC_EXPECTED_MAIN_SHA, head)) throw new Refusal("EXPECTED_MAIN_NOT_IN_CANDIDATE", env.ATC_EXPECTED_MAIN_SHA);
+  if (!isAncestor(env.ATC_REVIEWED_SOURCE_SHA, head)) throw new Refusal("REVIEWED_SOURCE_NOT_IN_CANDIDATE", env.ATC_REVIEWED_SOURCE_SHA);
+
+  const pinned = readFileSync(".node-version", "utf8").trim().replace(/^v/, "");
+  if (process.version !== `v${pinned}`) throw new Refusal("NODE_VERSION_MISMATCH", `node ${process.version}, .node-version ${pinned}`);
+
+  const range = `${env.ATC_EXPECTED_MAIN_SHA}..${head}`;
+  const diffCheck = git("diff", "--check", range);
+  if (diffCheck.status !== 0) throw new Refusal("DIFF_CHECK_FAILED", (diffCheck.stdout + diffCheck.stderr).trim());
+
+  const steps = [`git diff --check ${range}`];
+  steps.push(npm("NPM_CI_FAILED", "ci", "--no-audit", "--no-fund"));
+  steps.push(npm("TESTS_FAILED", "test"));
+  steps.push(npm("BUILD_FAILED", "run", "build"));
+
+  if (gitOut("rev-parse", "HEAD") !== head) throw new Refusal("CANDIDATE_HEAD_MOVED", "HEAD changed during verification");
+  const status = gitOut("status", "--porcelain", "--untracked-files=all");
+  if (status) throw new Refusal("CANDIDATE_DIRTY", status);
+
+  if (process.env.ATC_VERIFICATION_REPORT) {
+    const report = {
+      integration_sha: head,
+      expected_main_sha: env.ATC_EXPECTED_MAIN_SHA,
+      steps,
+      node: process.version,
+      dependency_digests: { "package-lock.json": digest("package-lock.json"), ".node-version": digest(".node-version") },
+    };
+    try {
+      writeFileSync(process.env.ATC_VERIFICATION_REPORT, JSON.stringify(report, null, 2) + "\n");
+    } catch (error) {
+      console.error(`verification report not written: ${error.message}`);
+    }
+  }
+}
+
+try {
+  verify();
+  console.log("integration verification passed");
+} catch (error) {
+  const token = error instanceof Refusal ? error.token : "VERIFIER_ERROR";
+  console.error(token);
+  console.error(error.message);
+  process.exit(1);
+}

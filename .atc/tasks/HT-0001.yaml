@@ -1,0 +1,32 @@
+task_id: HT-0001
+repository: yulinnliu/my-heartopia-tools
+base_sha: 7ec4265a9dc21ea07359f5ae350eb06375417ca1
+scope: 'Onboard this repository onto Agent Traffic Control: commit the ATC files,
+  declare task prefix HT and the integration verifier'
+governance_source: yulinnliu/agent-traffic-control
+governance_revision: b0c5c2b308b43f7d24993e53ac3c0e4a867f7aa5
+branch: worktree-claude+ht-0001-atc-onboarding
+authority:
+  edit: true
+  commit: true
+  push_topic: false
+  integrate_main: false
+  push_main: false
+  deploy: false
+decisions:
+  approved: '2026-11-11'
+  approved_by: Owner
+  O1: Commit the ATC files; .git/info/exclude keeps only /.claude/settings.local.json.
+  O2: Task prefix HT.
+  O3: 'Verifier argv ["node", "scripts/integration-verify.mjs"]: npm ci, npm test,
+    npm run build; no documentation-only exception; default 300 s timeout.'
+  O4: No atc-testkit; it has only the python toolchain.
+  O5: 'This first commit is reviewed, then the Owner fast-forwards main to it once
+    with git merge --ff-only, since main has no verifier section for atc integrate
+    to read; this record carries closure: closed in that same commit.'
+  O6: Local files sync owns move to ~/.atc/scratch/HT-0001-local-atc-backup; sync
+    then creates and commits them.
+closure:
+  state: closed
+  note: Bootstrap fast-forwarded onto main by the Owner outside atc integrate, because
+    main had no Integration verification section for atc integrate to read.

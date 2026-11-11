@@ -1,0 +1,4 @@
+[
+  "node",
+  "scripts/integration-verify.mjs"
+]
