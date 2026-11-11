@@ -86,12 +86,17 @@ function verify() {
   if (status) throw new Refusal("CANDIDATE_DIRTY", status);
 
   if (process.env.ATC_VERIFICATION_REPORT) {
+    // The atc-verification-report/2 shape (shared/conformance/verification-evidence/README.md of the
+    // workspace root): every range runs the whole suite in one stage, with no time slack.
     const report = {
-      integration_sha: head,
-      expected_main_sha: env.ATC_EXPECTED_MAIN_SHA,
-      steps,
+      schema: "atc-verification-report/2",
+      selector: { name: "integration-verify.mjs", version: "1" },
+      selection: { full: true, paths: [] },
+      stages: [{ name: "vitest", marker: "all", ignore: [] }],
+      dependency_inputs: { "package-lock.json": digest("package-lock.json"), ".node-version": digest(".node-version") },
+      time_slack: 0,
+      checks: steps,
       node: process.version,
-      dependency_digests: { "package-lock.json": digest("package-lock.json"), ".node-version": digest(".node-version") },
     };
     try {
       writeFileSync(process.env.ATC_VERIFICATION_REPORT, JSON.stringify(report, null, 2) + "\n");
