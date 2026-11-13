@@ -34,14 +34,15 @@ the `atc-coordinator` skill's `references/briefs.md`.
   are already known to both sessions and stay out of the block, and so does
   what the receiver can read: a reviewer reads the code at the named SHA, so a
   report gives results rather than narrating the implementation.
-- On session messaging, a report or verdict is saved as a file under
-  `~/.atc/reports/`, and the message's first line is its conclusion plus
-  that path. The session that integrates the task deletes its report files
-  at close-out (governance `DELIVERY.md` § Close-out). A notification that truncates (a
+- On session messaging, and for a reviewer running as a subagent, a report
+  or verdict is saved as a file under `~/.atc/reports/`, and the message's
+  or returned verdict's first line is its conclusion plus that path. The
+  session that integrates the task deletes its report files at close-out
+  (governance `DELIVERY.md` § Close-out). A notification that truncates (a
   short note, a preview) is a pointer, never the report.
 - On the paste carrier, the report or verdict goes inline, in full, in the
   one code block the user pastes whole; the file and path are for session
-  messaging only. A prompt that is long and revised repeatedly, or a
+  messaging and subagent reviewers only. A prompt that is long and revised repeatedly, or a
   lasting template, goes in a file.
 - A block the user pastes must not contain nested code fences: internal
   triple backticks prematurely close the outer block. Put commands, scripts
@@ -56,6 +57,19 @@ the `atc-coordinator` skill's `references/briefs.md`.
   identify it. A task ID from another project's numbering is dropped and
   pointed out.
 
+## Writer: the design step
+
+A task that needs a design first starts with it: the writer's first step
+produces the design, and the implementation follows as later steps of the
+same task and record.
+
+- The design document and the release notes are committed to the repository,
+  at the place the project's `AGENTS.md` or docs layout gives; a report alone
+  does not hold them, since close-out deletes `~/.atc/reports`.
+- The Owner's decisions on the design go into the task record's `decisions`.
+- The design step adds no status and no role: the same writer and reviewer
+  carry it, with the step report and the review below.
+
 ## Writer: the step report
 
 End every completed step with a step report in the shape governance
@@ -63,7 +77,10 @@ End every completed step with a step report in the shape governance
 
 1. Run the selection (governance `VERIFICATION.md` § Testing) and the
    mutants, one per guard, launchers and scripts included; the report gives
-   each command with its summary line and every surviving mutant.
+   each command with its summary line and every surviving mutant. A
+   selection `atc test run --select` skips with `SKIPPED_WIDE` is reported
+   as that line, never as a pass; `--touched` runs the directly touched
+   tests instead.
 2. Run `atc integrate --check` on the tip (governance `GIT_WORKFLOW.md`
    § Mainline check before final self-verification) and report the verdict
    it gives; `authority=missing` on its `CHECK` line is pending authority
@@ -87,14 +104,19 @@ only on the fetched tip; never continue from a stale base. For a published
 topic, confirm that the remote branch tip equals the tip you continue from
 before the first commit.
 
-After a PASS the reviewed SHA is frozen; fixes go in new commits.
+After a PASS the reviewed SHA is frozen; fixes go in new commits. After a
+FAIL verdict the writer may amend or squash the fixes into the reviewed
+commits instead (governance `GIT_WORKFLOW.md` § After formal review) and
+reports the new tip.
 
 Where the project runs its tests through `atc-testkit`, run targeted tests
 against the worktree with
-`atc test run --scratch <scratch> --tree <worktree> [--python <py>] -- <pytest args...>`;
+`atc test run --scratch <scratch> --tree <worktree> --task <task> [--python <py>] -- <pytest args...>`;
 elsewhere the targeted test commands are the ones the project's `AGENTS.md`
-names. `<scratch>` is a name; the run creates it as `<tmp>/<scratch>`, where
-`<tmp>` is `~/.atc/tmp`, or `ATC_TMP` when that is set. The run removes every
+names. `--task` records the scratch under the task, so close-out removes it
+whatever tree a run used. `<scratch>` is a name; the run creates it as
+`<tmp>/<scratch>`, where `<tmp>` is `~/.atc/tmp`, or `ATC_TMP` when that is
+set. The run removes every
 `HAMI_*` variable so the host's project settings stay out of it, points each
 data-root variable the tree's `[tool.atc-testkit]` names, or
 `QUANT_DATA_ROOT` when it names none, at `<scratch>/qdr`, makes the scratch
@@ -129,7 +151,9 @@ one `atc test mutants` call. Tests and mutants run in the foreground
 
 Whether you review fresh or as a continued re-review is governance
 `VERIFICATION.md` § Independent review; a continued re-review reads the fix
-diff against your last round's findings.
+diff against your last round's findings, after a FAIL amend the
+`git range-diff` of the old and the new tip, and runs `atc verify` on the new
+tip.
 
 1. **Pin the revision.** First confirm the previous topic's closure read-only:
    the `main` position and `atc worktree audit`. Then review exactly the tip
@@ -192,8 +216,9 @@ diff against your last round's findings.
 ## Reviewer: the verdict block
 
 The verdict takes the shape governance `VERIFICATION.md` § Independent review
-gives. Deliver it as "Every block you write" says; on session messaging its
-file is `~/.atc/reports/<task>-<short sha>-review.md`.
+gives. Deliver it as "Every block you write" says; on session messaging or
+as a subagent, you write its file
+`~/.atc/reports/<task>-<short sha>-review.md` yourself.
 
 - The verified line: test counts, mutant results, `atc verify`'s last line,
   read-only host evidence.
@@ -230,15 +255,15 @@ file is `~/.atc/reports/<task>-<short sha>-review.md`.
   which names the repository, and the full 40-character reviewed SHA
   (governance `GIT_WORKFLOW.md` § Integrate). A task identity string in place
   of a record ID adds `--project <name>`, `--project root` for the workspace
-  root. When the record on `main` does not grant the integration,
-  the holder adds `--owner-words "Owner run: approve integration"` and gives
-  the filled instruction to the Owner (governance `GIT_WORKFLOW.md`
-  § Task and authority). The command names no branch, verifier or timeout: the tool
-  takes the branch from the record's `branch` (a task identity string: the
-  one local branch at the reviewed SHA) and reads the verifier from the
-  `## Integration verification` section of `AGENTS.md` at `main`. In a
-  repository without managed worktrees, where the topic branch lives in the
-  main checkout, `git -C <main checkout> switch main` comes before it.
+  root. When the record on `main` does not grant the integration, the holder
+  adds `--owner-run` and gives the filled instruction to the Owner
+  (governance `GIT_WORKFLOW.md` § Task and authority). The command names no
+  branch, verifier or timeout: the tool takes the branch from the record's
+  `branch` (a task identity string: the one local branch at the reviewed
+  SHA) and reads the verifier from the `## Integration verification` section
+  of `AGENTS.md` at `main`. In a repository without managed worktrees, where
+  the topic branch lives in the main checkout,
+  `git -C <main checkout> switch main` comes before it.
 
   Cleanup never rides on a PASS: it follows governance `DELIVERY.md`
   § Close-out. A conditional PASS or FAIL carries no integration
@@ -258,7 +283,8 @@ writer runs neither and is sent neither.
   rebased tip; `CARRY_OVER_REFUSED` sends that tip to the reviewer for a
   fresh review.
 - When the verdict or the holder sends work back, the fix goes in new
-  commits and a new step report.
+  commits, or after a FAIL verdict as "Writer: the step report" allows, and
+  in a new step report.
 
 Done when the holder has the rebased tip or the new step report, or nothing
 is sent back.

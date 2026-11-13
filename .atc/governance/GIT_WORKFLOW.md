@@ -181,11 +181,17 @@ for alignment with task-oriented branch naming.
 ## After formal review: reviewed commits are frozen
 
 - Never amend, squash, rebase, or force-push a commit at or below the
-  reviewed SHA.
+  reviewed SHA, except as the FAIL bullet below allows.
 - A further change is a new commit on top. Only that delta needs review, and
   its verdict names the new tip.
+- After a FAIL verdict the writer may instead amend or squash the fixes into
+  the reviewed commits. The verdict's SHA is void; the re-review reads
+  `git range-diff` of the old and the new tip against the findings, and
+  `atc verify` runs on the new tip. Not when another branch stacks on the
+  reviewed commits or the topic was pushed; after a PASS the history stays
+  frozen as above.
 - If the reviewed SHA is no longer an ancestor of the branch tip, the review
-  is void: the branch needs a full re-review.
+  is void: the branch needs a full re-review, except after the amend above.
 - Rewriting anyway (for example, task authority explicitly chooses a rebase) is allowed only as an
   explicit decision, and voids the review the same way.
 - The one exception is the rebase `Integrate` requires of an unpublished topic
@@ -442,8 +448,9 @@ exactly one source.
   (`root` for the workspace root); it integrates the one local branch at the
   reviewed SHA.
 - The authority is either the record on `main` with `integrate_main: true`,
-  or `--owner-words <quote>`: the Owner's words quoted, or the decision
-  label of a command the Owner runs.
+  or `--owner-words <quote>` with the Owner's words quoted, or `--owner-run`
+  on a command the Owner runs, which records the decision label
+  `Owner run: approve integration` as the `--owner-words` quote.
 - A range whose changed paths all lie under `.atc/tasks/` is records-only: the
   record check runs in place of the verifier.
 - Recovering an interrupted integration takes `--task`.
@@ -453,15 +460,18 @@ with `integrate_main: true` is the Owner's integration authority for `FF`
 after an unconditional PASS on the exact SHA, never for `NO_FF`
 (`AUTHORITY_NOT_FF`), a push or a deploy.
 
-The Owner runs every `atc integrate` but `--check`; no agent runs it.
-Authority is split by flag:
+An agent runs `atc integrate --task <ID> --reviewed <SHA>` only on the
+authority of a record on `main` that grants `integrate_main`, after the
+reviewer's unconditional PASS on that SHA; `--owner-run` and `--owner-words`
+stay the Owner's, and an agent passes them only with `--check`. Where the
+workspace's hard-deny policy denies an agent `atc integrate` but `--check`,
+the Owner runs every integration. Authority is split by flag:
 
-- on the record's authority the Owner runs `atc integrate --task <ID>`
-  without `--owner-words` (§ Owner-run commands);
+- on the record's authority `atc integrate --task <ID>` runs without
+  `--owner-run` (§ Owner-run commands);
 - only the coordinator, who hears the Owner, writes a record's `authority`;
-- `--owner-words` carries the Owner's decision: the Owner runs the
-  integration command the coordinator gives (§ Owner-run commands), with
-  the decision label `Owner run: approve integration` as the quote. The
+- `--owner-run` carries the Owner's decision: the Owner runs the
+  integration command the coordinator gives (§ Owner-run commands). The
   coordinator never runs it and never relays it to a writer. The Owner
   running the command is the authority; no local artifact attests it.
 
@@ -496,12 +506,12 @@ line that runs unchanged in PowerShell and in a POSIX shell:
 - every SHA in full, 40 characters.
 
 ```text
-atc integrate --task <task> --reviewed <40-character SHA> --owner-words "Owner run: approve integration"
+atc integrate --task <task> --reviewed <40-character SHA> --owner-run
 git -C "<main checkout>" push origin <40-character SHA>:refs/heads/main
 ```
 
 A task identity string adds `--project <name>`; a record on `main` that
-grants `integrate_main` for `FF` drops `--owner-words`. A records-only range
+grants `integrate_main` for `FF` drops `--owner-run`. A records-only range
 takes the same form.
 
 The coordinator reads completion from Git, never from a report that the
