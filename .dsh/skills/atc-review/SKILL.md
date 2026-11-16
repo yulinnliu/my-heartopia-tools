@@ -76,10 +76,12 @@ End every completed step with a step report in the shape governance
 `DELIVERY.md` § 8.1 gives, sent to the coordinator only:
 
 1. Run the tests the task's test level names (governance `VERIFICATION.md`
-   § Testing, Test levels): `atc test <task>` for the related tests and,
-   under `strict`, `atc test <task> --mutants <file>`, one mutant per guard,
-   launchers and scripts included; the report gives each command with its
-   summary line and every surviving mutant. Under `none` no test runs.
+   § Testing, Test levels): `atc test <task>` for the related tests; the
+   report gives each command with its summary line. Under `strict` you write
+   and run no mutant: the report lists every guard the change adds or alters,
+   launchers and scripts included, each as `file:line` and what it blocks,
+   the reviewer's starting point for its mutants. Under `none` no test
+   runs.
 2. Run `atc integrate <task> --check` on the tip (governance
    `GIT_WORKFLOW.md` § Mainline check before final self-verification) and
    report the verdict it gives. On `REBASE_REQUIRED` or
@@ -113,7 +115,11 @@ the targeted test commands are the ones the project's `AGENTS.md` names.
 Every run registers its scratch to the task (`<tmp>/<task>`, or
 `<tmp>/<task>-<sha7>` under `--sha`), so `atc task close` removes it; a
 directory under `<tmp>` named for the task but not registered to it is
-listed for the Owner's consent and never deleted. `<tmp>` is `~/.atc/tmp`,
+listed for the Owner's consent and never deleted. A reviewer, a subagent
+included, writes its own output files (captured output, notes, logs) only
+inside a scratch registered to the task, never directly under `<tmp>`,
+where close-out does not collect them; the verdict file alone goes to
+`~/.atc/reports/`. `<tmp>` is `~/.atc/tmp`,
 or `ATC_TMP` when that is set. The run removes every
 `HAMI_*` variable so the host's project settings stay out of it, points each
 data-root variable the tree's `[tool.atc-testkit]` names, or
@@ -193,7 +199,9 @@ diff against your last round's findings, after a FAIL amend the
    for the host's test workers, not stuck; the queue is outside the timeout,
    a wait past its limit stops with `WORKER_WAIT_TIMEOUT` naming the runs
    ahead, and `atc doctor -v` shows the pool. Rerun it once they finish.
-   One single-string mutant per guard, one at a time, restored after
+   Under `strict` you write the mutants yourself, starting from the guard
+   list of the step report and adding any guard your own search (step 5)
+   finds: one single-string mutant per guard, one at a time, restored after
    each run.
    Done when every file in the copy is proven equal to its Git object again
    and every surviving mutant is listed as a test gap or argued equivalent.

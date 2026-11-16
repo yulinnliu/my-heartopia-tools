@@ -7,8 +7,12 @@ atc test <task> --mutants <mutants.json> [--sha <sha>] [-- <test>...]
 Applies each mutant alone to the export of `<sha>` (default: the task
 branch's tip) at `<tmp>/<task>-<sha7>/tree`, built once with its own
 environment, and restores its files after each run. The tests after `--`
-judge every mutant; without them, the tests related to the task's changes
-since its `base_sha` do.
+judge every mutant. Without them, each mutant is judged by the tests the
+tree's selector picks for its edited paths plus its own `tests`, narrowed
+to the tests the unmutated run saw execute the lines it edits, child
+processes included; `<scratch>/mutants-covered.json` lists each mutant's
+lines and tests. A mutant whose edited lines no test executed is reported
+`NOT_COVERED` without a run.
 Each run is pytest with `-x` and a 900-second timeout.
 
 ## Input
@@ -48,10 +52,24 @@ mutant.
   `SHA_NOT_FOUND` (exit 9) before the scratch is touched, then the scratch
   refusals, `TIME_SLACK_INVALID` and `PRIVATE_DESKTOP_INVALID` (exit 9).
 - The tests run once unmutated first, the default tests together with every
-  mutant's own `tests`. A red unmutated run prints `BASELINE-RED`, applies no
-  mutant and exits 1.
+  mutant's own `tests`, in parallel on the host's workers. A red unmutated
+  run prints `BASELINE-RED` naming every failed test, applies no mutant and
+  exits 1. A rerun on the same SHA, tests, recorder and testkit (a fix-only
+  re-review, an added mutant in a file already recorded) prints
+  `BASELINE-OK reused ...` and runs no baseline; `NOTE baseline: not
+  reused: <field>` says why one did not.
+- One run uses a scratch at a time: a second stops with `MUTANTS_RUNNING`
+  (exit 9). A file a killed run left mutated stops the command with
+  `TREE_NOT_PRISTINE` (exit 9); `atc test <task> --clean` then exports anew.
 - Each mutant prints one line: `KILLED` with the `FAILED` line of a run the
-  kill rule counts, or `SURVIVED` with the summary of a run that exits 0.
+  kill rule counts, `SURVIVED` with the summary of a run that exits 0, or
+  `NOT_COVERED` with the edited lines no test executed. A `NOTE <label>:`
+  line before it names why a mutant runs its unnarrowed tests instead (a
+  file that is not Python, a file no recorded process loaded, lines run
+  outside a test).
+- `NOT_COVERED` is a test gap like a survivor; it also says nothing about
+  tests that read the source instead of running it, which judge a mutant
+  only when its `tests` name them by node ID or follow `--`.
 - Any other ending of a mutated run (an `ERROR` line alone, exits 2 to 5, a
   timeout, a failure the assertion rule does not count) prints
   `INCONCLUSIVE <label> -> <reason>`, stops the run with exit 1 and leaves
@@ -64,5 +82,6 @@ mutant.
 - The last line reads `done: M mutants, S survived <labels>`, or
   `done: N of M mutants, S survived <labels>` after a stop, also one on the
   last mutant, where `N` counts the mutants that printed `KILLED`,
-  `SURVIVED` or `INCONCLUSIVE`. A survivor exits 1; the
+  `SURVIVED`, `NOT_COVERED` or `INCONCLUSIVE`, and `S` and the labels
+  include the `NOT_COVERED` ones. A survivor exits 1; the
   reviewer reads them from this line.
