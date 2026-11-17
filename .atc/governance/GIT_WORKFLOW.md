@@ -267,21 +267,35 @@ integration unaffected and writes no record. The report and record formats
 are defined in `shared/conformance/verification-evidence/README.md`.
 `atc test <task> --candidate` writes a record of its own candidate, passed or failed, apart from the
 records the pre-push gate reads; within the active slot `atc integrate`
-reuses its latest passing one in place of rerunning the verifier when the
-candidate tree, expected main, reviewed SHA, verifier argv and timeout,
-platform, dependency inputs, selector and time slack all match, and names
-the reused record in its evidence and integration record.
+reuses its latest passing one that ran on the candidate tree itself in place
+of rerunning the verifier when the input digest, verifier argv and timeout,
+platform, dependency inputs, selector and time slack all match, and names the reused
+record and the revision it ran on in its evidence and integration record.
+The record's expected main and reviewed SHA stay in it for audit.
 
 Apart from that evidence, the adapter records every integration that updates
 `main`, with or without a verification report, as one JSON line in
 `<git common dir>/atc/integrations.jsonl`: the candidate SHA, the reviewed
-SHA, the `main` it was integrated onto (`main_before`), the task, its
-authority, whether the range is records-only, and the time (the keys are in
-`Task and authority`). For a carried-over review, `reviewed` holds the
-rebased tip and `carried_over_from` the SHA the review named; the evidence
-record carries the same pair. The pre-push gate reads only the verification
-evidence of `Test evidence` below, never this record; `atc push` reads it
-to check every commit of a push (`Publication boundary`).
+SHA, the `main` it was integrated onto (`main_before`), the commits the
+integration brought onto `main` (`commits`, every SHA of
+`main_before..candidate`, oldest first), the task, its authority, whether the
+range is records-only, and the time (the keys are in `Task and authority`).
+For a carried-over review, `reviewed` holds the rebased tip and
+`carried_over_from` the SHA the review named; the evidence record carries the
+same pair. The pre-push gate reads only the verification evidence of `Test
+evidence` below, never this record; `atc push` reads it to check every commit
+of a push (`Publication boundary`): a commit is recorded when a line's
+`commits` names it, whether or not that line's candidate is still on `main`.
+
+The log is append-only. A line written without `commits` gains a supplement
+line `{"kind": "commits", "of": <candidate SHA>, "main_before", "commits",
+"recorded_at"}`, which `atc integrate` appends while both commits still exist
+in the repository; until then `atc push` computes the same range from Git. A
+line with neither `commits` nor a supplement line, whose `main_before` or
+candidate no longer exists, records no commits, and a push that carries one of
+its commits refuses. A line without `main_before` records no `commits`; its
+commits count only while its candidate is in `origin/main..main`, as those its
+candidate reaches that `origin/main` and earlier such candidates do not.
 
 The verifier must test the candidate identified by `ATC_INTEGRATION_SHA`, not
 resolve a moving branch name. A nonzero result, changed candidate HEAD, dirty
@@ -391,7 +405,8 @@ a new integration.
 The coordinator, who hears the Owner, records the squash as one
 `integrations.jsonl` line: `kind: squash`, the `task`, `records_only: false`,
 the squash commit as `candidate_sha`, the recorded target tip as
-`main_before`, the source tip as `reviewed`, and the Owner's words as
+`main_before`, the one squash commit as `commits`, the source tip as
+`reviewed`, and the Owner's words as
 `authority` `{"kind": "owner_words", "quote": ...}`. Matching trees or patches
 never establish authorization or completeness by themselves. `atc task close`
 counts the task as integrated, with no flag, only when that line is the task's
@@ -422,7 +437,8 @@ flipping `core.bare` in a shared config and breaking every linked worktree.
 Test evidence identifies the checked commit SHA and whether the tree was
 clean. Verification scope, full regression timing and evidence reuse follow
 `VERIFICATION.md`. Complete required integration checks on the integration
-revision before advancing `main`. A fast-forward to that exact verified
+revision, or reuse a run whose recorded inputs equal its own under
+`VERIFICATION.md`, before advancing `main`. A fast-forward to that exact verified
 revision preserves its evidence and requires no duplicate run solely because
 it is now on `main`. Failed verification blocks the update; correct the
 candidate under the applicable review rules before verifying again.
@@ -454,13 +470,17 @@ nothing by itself; only the coordinator, who hears the Owner, writes it.
 In a paste-only setup with no coordinator session, the user runs the
 command themself.
 
-Each `integrations.jsonl` line carries `task`, `records_only` and
+Each integration line of `integrations.jsonl`, the lines with a
+`candidate_sha`, carries `task`, `records_only` and
 `authority`: `{"kind": "owner_words", "quote": ...}` or `{"kind": "sync"}`
 for a governance sync commit; `{"kind": "record", "task_id": ...}` and
 `{"kind": "unclassified"}` remain values readers accept in existing logs. A squash
 line also carries `kind: squash` (§ Explicitly authorized squash). A records-only integration that binds several tasks
 writes one line per task with the same candidate, and every records-only line
-carries `main_before`.
+carries `main_before`. The log's other lines are not integration lines and
+carry no `candidate_sha`, `records_only` or `authority`: supplement lines
+(`kind: commits`, § Integrate) and the `report` lines `atc task close`
+writes at close-out (`kind: report`).
 
 ### Owner-run commands
 
